@@ -179,6 +179,7 @@ const SignupPage: React.FC = () => {
 
   // Handle form submission
   const handleSignup = async (e: FormEvent) => {
+
     // Prevent the form from submitting normally
     e.preventDefault();
     
@@ -202,15 +203,22 @@ const SignupPage: React.FC = () => {
         body: JSON.stringify(formData),
       });
 
+      // Parse the response data
+      const data = await response.json();
+
       // Check if the request was successful
       if (!response.ok) {
-        throw new Error('Server returned an error');
+        setStatus({ 
+          type: 'error', 
+          message: data.error || 'Failed to create account'
+        });
+        return;
       }
 
       // Show success message
       setStatus({ 
         type: 'success', 
-        message: 'Great! Your account has been created successfully!'
+        message: data.message || 'Your account has been created successfully!'
       });
       
       // Clear sensitive data from the form
