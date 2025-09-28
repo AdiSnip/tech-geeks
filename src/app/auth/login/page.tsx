@@ -1,57 +1,116 @@
+// This directive is required for client-side interactivity in Next.js 13+
 "use client";
-import React, { useState } from "react";
-import { Mail, Lock, LogIn } from "lucide-react";
 
+// Import necessary dependencies and icons
+import React, { useState } from "react";
+import { 
+  Mail,  // Icon for email input
+  Lock,  // Icon for password input
+  LogIn  // Icon for login button
+} from "lucide-react";
+
+// Define the structure of our login form data
 interface LoginData {
-  email: string;
-  password: string;
+  email: string;     // User's email address
+  password: string;  // User's password
 }
 
-const LoginPage: React.FC = () => {
-  const [formData, setFormData] = useState<LoginData>({ email: "", password: "" });
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+// Define status message types for better type safety
+type StatusMessage = string | null;
 
-  // Update input values
+/**
+ * LoginPage Component
+ * 
+ * A user authentication page that handles login functionality.
+ * Features:
+ * - Email and password form
+ * - Input validation
+ * - Error handling
+ * - Success feedback
+ */
+const LoginPage: React.FC = () => {
+  // Initialize form data with empty email and password
+  const [formData, setFormData] = useState<LoginData>({ 
+    email: "", 
+    password: "" 
+  });
+
+  // State for error messages (null means no error)
+  const [error, setError] = useState<StatusMessage>(null);
+
+  // State for success messages (null means no success message)
+  const [success, setSuccess] = useState<StatusMessage>(null);
+
+  /**
+   * Handles changes in form input fields
+   * 
+   * This function updates the form data whenever a user types in an input field.
+   * It also clears any error or success messages to provide a fresh start.
+   * 
+   * @param e - The input change event containing the field name and new value
+   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError(null);
     setSuccess(null);
   };
 
-  // Submit form and send POST request
+  /**
+   * Handles form submission
+   * 
+   * This function:
+   * 1. Prevents the default form submission
+   * 2. Validates the input fields
+   * 3. Sends the login request to the server
+   * 4. Handles the response appropriately
+   * 
+   * @param e - The form submission event
+   */
   const handleSubmit = async (e: React.FormEvent) => {
+    // Prevent the form from submitting normally
     e.preventDefault();
+    
+    // Clear any previous messages
     setError(null);
     setSuccess(null);
 
+    // Validate email format
     if (!formData.email.includes("@")) {
-      setError("Please enter a valid email address.");
+      setError("Please enter a valid email address (e.g., user@example.com)");
       return;
     }
+
+    // Validate password
     if (!formData.password) {
-      setError("Password cannot be empty.");
+      setError("Please enter your password");
       return;
     }
 
     try {
-      const res = await fetch("/api/auth/login", {
+      // Send login request to the server
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
-      const data = await res.json();
+      // Parse the response data
+      const data = await response.json();
 
-      if (!res.ok) {
-        setError(data.message || "Login failed. Please try again.");
+      // Check if the request was successful
+      if (!response.ok) {
+        setError(data.message || "Login failed. Please check your email and password.");
         return;
       }
 
-      setSuccess("Login successful! Redirecting...");
+      // Show success message
+      setSuccess("Welcome back! Redirecting you to your dashboard...");
+      
+      // Log success (remove in production)
       console.log("User logged in:", data);
 
-      // Example: redirect to dashboard
+      // TODO: Redirect to dashboard
+      // Will be implemented in the next step
       // router.push("/dashboard");
     } catch {
       setError("Something went wrong. Please try again later.");
@@ -72,10 +131,11 @@ const LoginPage: React.FC = () => {
         {success && <p className="text-sm text-green-600">{success}</p>}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Email Input Field */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
               <span className="flex items-center gap-1">
                 <Mail size={16} /> Email
               </span>
