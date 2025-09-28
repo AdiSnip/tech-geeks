@@ -92,7 +92,7 @@ Other files:
 
 ## License
 
-This project is licensed under the GPU 2.0 License. See the LICENSE file for details.
+This project is licensed under the GPU 3.0 License. See the LICENSE file for details.
 
 ---
 
