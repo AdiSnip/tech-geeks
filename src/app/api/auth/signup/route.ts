@@ -75,7 +75,6 @@ export async function POST(request: Request) {
     const token = jwt.sign(
       { userId: newUser._id },
       JWT_SECRET, // Use the checked variable
-      { expiresIn: '1h' }
     );
 
     // Create the response and then set the cookie

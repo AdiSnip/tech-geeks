@@ -51,7 +51,7 @@ const LoginPage: React.FC = () => {
       console.log("User logged in:", data.user);
 
       // TODO: redirect to dashboard
-      // e.g., router.push("/dashboard");
+      window.location.href = "/main/dashboard";
 
     } catch (err) {
       console.error(err);

@@ -1,11 +1,18 @@
-import React from 'react'
+"use client";
 
-const page = () => {
+import React from "react";
+import { useUser } from "@/context/userContext";
+
+const Page = () => {
+  const { user } = useUser();
+
   return (
-    <div className='h-full w-full bg-amber-50'>
-        <h1 className='text-3xl font-bold'>Dashboard</h1>
+    <div className="h-full w-full bg-amber-50 p-4">
+      <h1 className="text-3xl font-bold">
+        {user ? `Welcome, ${user.name}!` : "Loading..."}
+      </h1>
     </div>
-  )
-}
+  );
+};
 
-export default page
+export default Page;

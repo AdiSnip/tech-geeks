@@ -1,7 +1,7 @@
 'use client';
 
 // Import necessary React components and icons
-import React, { useState, ChangeEvent, FormEvent } from 'react';
+import React, { useState, ChangeEvent, FormEvent} from 'react';
 import { 
   Mail,      // Email icon
   Lock,      // Password icon
@@ -12,6 +12,7 @@ import {
   CheckCircle,// Success icon
   AlertTriangle // Error icon
 } from 'lucide-react';
+
 
 // Define the structure of our form data
 interface FormData {
@@ -227,6 +228,11 @@ const SignupPage: React.FC = () => {
         password: '', 
         confirmPassword: '' 
       }));
+
+      // Redirect to login page after successful signup
+      // Navigate to the dashboard after successful signup
+      window.location.href = '/auth/login';
+      
     } catch {
       // Show error message if something goes wrong
       setStatus({ 
