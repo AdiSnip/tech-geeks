@@ -10,6 +10,7 @@ export interface IUser extends Document {
   role: 'entrepreneur' | 'mentor' | 'admin';
   name: string;
   location: string;
+  profilePicture?: string;
   businessType: string;
   profileComplete: number; // 0 to 100%
   createdAt: Date;
@@ -28,6 +29,7 @@ const UserSchema: Schema = new Schema({
   },
   name: { type: String, required: true },
   location: { type: String, required: true },
+  profilePicture: { type: String },
   businessType: { type: String, required: true },
   profileComplete: { type: Number, default: 0, min: 0, max: 100 },
 }, { timestamps: true });

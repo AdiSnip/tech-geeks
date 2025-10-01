@@ -8,6 +8,7 @@ export interface IProduct extends Document {
   category: string;
   imageUrl: string;
   status: 'active' | 'draft' | 'soldout';
+  soldDate?: Date;
   createdAt: Date;
 }
 
@@ -19,6 +20,7 @@ const ProductSchema: Schema = new Schema({
   category: { type: String, required: true },
   imageUrl: { type: String, required: true },
   status: { type: String, enum: ['active', 'draft', 'soldout'], default: 'draft' },
+  soldDate: { type: Date },
 }, { timestamps: true });
 
 export const Product = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
