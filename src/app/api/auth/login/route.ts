@@ -40,6 +40,13 @@ export async function POST(request: Request) {
         id: user._id,
         email: user.email,
         name: user.name,
+        role: user.role,
+        location: user.location,
+        profilePicture: user.profilePicture,
+        businessType: user.businessType,
+        profileComplete: user.profileComplete,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       },
     });
   } catch (err) {

@@ -103,3 +103,11 @@ If you want, I can also:
 - Generate a CONTRIBUTING.md with PR and code style guidelines.
 
 Would you like me to add any of the above? 
+
+## APIs
+
+get api
+
+- /api/user   (for user details)
+- /api/learningmodule   (for enrolled learning module)
+- /api/product/[id]   (for products list of user)

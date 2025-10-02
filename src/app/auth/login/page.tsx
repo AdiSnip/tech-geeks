@@ -2,6 +2,9 @@
 
 import React, { useState } from "react";
 import { Mail, Lock, LogIn } from "lucide-react";
+import { useUser } from "@/context/userContext";
+
+
 
 interface LoginData {
   email: string;
@@ -12,6 +15,7 @@ const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState<LoginData>({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { setUser, user } = useUser();
 
   // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,6 +45,7 @@ const LoginPage: React.FC = () => {
       });
 
       const data = await res.json();
+      console.log("Response data:", data);
 
       if (!res.ok) {
         setError(data.error || "Login failed");
@@ -49,6 +54,8 @@ const LoginPage: React.FC = () => {
 
       setSuccess("Login successful! Redirecting...");
       console.log("User logged in:", data.user);
+
+      setUser(data.user);
 
       // TODO: redirect to dashboard
       window.location.href = "/main/dashboard";

@@ -5,6 +5,7 @@ import { useUser } from "@/context/userContext";
 
 const Page = () => {
   const { user } = useUser();
+  console.log("User data:", user);
 
   return (
     <div className="h-full w-full bg-amber-50 p-4">

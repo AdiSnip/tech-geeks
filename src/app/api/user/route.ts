@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { User } from "@/models/user.model";
+import { redirect } from "next/dist/server/api-utils";
 
 export async function GET(req: Request) {
   // Read cookie
@@ -15,7 +16,7 @@ export async function GET(req: Request) {
 
   const token = cookies["token"];
   if (!token) {
-    return NextResponse.json({ error: "No token found" }, { status: 401 });
+    return NextResponse.json({ error: "No token found" }, { status: 500 });
   }
 
   try {

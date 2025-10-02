@@ -13,14 +13,28 @@ export default function Hero() {
         const response = await fetch("/api/user", { credentials: "include" });
         const data = await response.json();
 
+
         if (!data) {
           console.log("fetched data is not available");
+          router.push('/auth/login')
           return;
         }
 
-        setUser(data);
-        console.log("userContext updated", data);
-        router.push("/main/dashboard"); // client-side redirect
+        if (response.status === 500){
+          console.error("Server error while fetching user data");
+          router.push('/auth/login');
+          return;
+        }
+
+        if(user != data){
+          setUser(data);
+          console.log("userContext updated", user);
+          router.push("/main/dashboard"); // client-side redirect
+        }else{
+          console.log("user context does not need update",user)
+          router.push("/main/dashboard")
+        }
+
       } catch (err) {
         console.error(err);
       }
