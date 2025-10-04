@@ -1,32 +1,47 @@
 // src/app/api/User/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { User } from "@/models/user.model";
-import { redirect } from "next/dist/server/api-utils";
+import dbConnect from "@/libs/db";
 
-export async function GET(req: Request) {
-  // Read cookie
+// Utility: Parse cookies from headers
+function parseCookies(req: Request): Record<string, string> {
   const cookieHeader = req.headers.get("cookie") || "";
-  const cookies = Object.fromEntries(
+  return Object.fromEntries(
     cookieHeader
       .split(";")
       .map(c => c.trim().split("="))
       .map(([k, v]) => [k, decodeURIComponent(v)])
   );
+}
 
+// Utility: Verify JWT and return userId
+function verifyToken(token: string): { userId: string } {
+  return jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+}
+
+// GET: Fetch current user
+export async function GET(req: Request) {
+
+  await dbConnect()
+  
+  const cookies = parseCookies(req);
   const token = cookies["token"];
+
   if (!token) {
-    return NextResponse.json({ error: "No token found" }, { status: 500 });
+    return NextResponse.json({ error: "Authentication token not found" }, { status: 401 });
   }
 
   try {
-    const {userId} = jwt.verify(token, process.env.JWT_SECRET!) as {userId: string};
+    const { userId } = verifyToken(token);
     const user = await User.findById(userId);
-    if(!user){
-      return NextResponse.json({error: 'User not found'}, {status: 404});
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
     return NextResponse.json(user);
-  } catch (err: unknown) {
+  } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Invalid token" },
       { status: 401 }
@@ -34,24 +49,18 @@ export async function GET(req: Request) {
   }
 }
 
+// POST: Update user data
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { email, password, role, name, location, profilePicture, businessType, profileComplete } = body;
-  const cookieHeader = req.headers.get("cookie") || "";
-  const cookies = Object.fromEntries(
-    cookieHeader
-      .split(";")
-      .map(c => c.trim().split("="))
-      .map(([k, v]) => [k, decodeURIComponent(v)])
-  );
-
+  const cookies = parseCookies(req);
   const token = cookies["token"];
+
   if (!token) {
-    return NextResponse.json({ error: "No token found" }, { status: 401 });
+    return NextResponse.json({ error: "Authentication token not found" }, { status: 401 });
   }
+
   try {
-    const {userId} = jwt.verify(token, process.env.JWT_SECRET!) as {userId: string};
-    const UpdatedUser = await User.findByIdAndUpdate(userId, {
+    const body = await req.json();
+    const {
       email,
       password,
       role,
@@ -60,15 +69,43 @@ export async function POST(req: Request) {
       profilePicture,
       businessType,
       profileComplete,
-    }).select("+password");
-    if(!UpdatedUser){
-      return NextResponse.json({error: 'User not found'}, {status: 404});
+    }: {
+      email?: string;
+      password?: string;
+      role?: string;
+      name?: string;
+      location?: string;
+      profilePicture?: string;
+      businessType?: string;
+      profileComplete?: boolean;
+    } = body;
+
+    const { userId } = verifyToken(token);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        email,
+        password,
+        role,
+        name,
+        location,
+        profilePicture,
+        businessType,
+        profileComplete,
+      },
+      { new: true, runValidators: true }
+    ).select("+password");
+
+    if (!updatedUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    return NextResponse.json(UpdatedUser);
+
+    return NextResponse.json(updatedUser);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Invalid token" },
-      { status: 401 }
+      { error: error instanceof Error ? error.message : "Something went wrong" },
+      { status: 400 }
     );
   }
 }

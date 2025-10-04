@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect } from "react";
 import { useUser } from "@/context/userContext";
 import { useRouter } from "next/navigation";
@@ -10,45 +11,50 @@ export default function Hero() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch("/api/user", { credentials: "include" });
+        const response = await fetch("/api/user", {
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.error(`Error fetching user: ${response}`);
+          router.push("/auth/login");
+          return;
+        }
+
         const data = await response.json();
 
-
-        if (!data) {
-          console.log("fetched data is not available");
-          router.push('/auth/login')
+        if (!data || data.error) {
+          console.error("Invalid user data received:", data);
+          router.push("/auth/login");
           return;
         }
 
-        if (response.status === 500){
-          console.error("Server error while fetching user data");
-          router.push('/auth/login');
-          return;
-        }
-
-        if(user != data){
+        // Update context only if needed
+        if (!user || user !== data) {
           setUser(data);
-          console.log("userContext updated", user);
-          router.push("/main/dashboard"); // client-side redirect
-        }else{
-          console.log("user context does not need update",user)
-          router.push("/main/dashboard")
+          console.log("User context updated:", data);
+        } else {
+          console.log("User already in context:", user);
         }
+
+        // Redirect to dashboard after setting user
+        router.push("/main/dashboard");
 
       } catch (err) {
-        console.error(err);
+        console.error("Failed to fetch user:", err);
+        router.push("/auth/login");
       }
     };
 
-    // Only fetch if user is not already in context
     if (!user) {
       fetchUser();
     } else {
-      console.log("user already in context", user);
+      console.log("User already present:", user);
       router.push("/main/dashboard");
     }
+
   }, [user, setUser, router]);
-  
+
   return (
     <section className="relative bg-gray-50">
       <div className="mx-auto max-w-7xl px-6 py-20 text-center lg:py-32 lg:px-8">

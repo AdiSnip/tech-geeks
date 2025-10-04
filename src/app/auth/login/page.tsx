@@ -3,8 +3,7 @@
 import React, { useState } from "react";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { useUser } from "@/context/userContext";
-
-
+import { useRouter } from "next/navigation";
 
 interface LoginData {
   email: string;
@@ -15,7 +14,10 @@ const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState<LoginData>({ email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const { setUser, user } = useUser();
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const { setUser } = useUser();
+  const router = useRouter();
 
   // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -27,13 +29,19 @@ const LoginPage: React.FC = () => {
   // Handle form submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
     if (!formData.email.includes("@")) {
       setError("Please enter a valid email address");
+      setLoading(false);
       return;
     }
+
     if (formData.password.length < 6) {
       setError("Password must be at least 6 characters");
+      setLoading(false);
       return;
     }
 
@@ -42,6 +50,7 @@ const LoginPage: React.FC = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
+        credentials: "include", // ✅ Important for sending/receiving cookies
       });
 
       const data = await res.json();
@@ -49,20 +58,28 @@ const LoginPage: React.FC = () => {
 
       if (!res.ok) {
         setError(data.error || "Login failed");
+        setLoading(false);
         return;
       }
 
+      if (!data.user) {
+        setError("Login failed: no user data returned.");
+        setLoading(false);
+        return;
+      }
+
+      setUser(data.user); // ✅ Set user context
       setSuccess("Login successful! Redirecting...");
       console.log("User logged in:", data.user);
 
-      setUser(data.user);
-
-      // TODO: redirect to dashboard
-      window.location.href = "/main/dashboard";
+      // Redirect to dashboard
+      router.push("/main/dashboard");
 
     } catch (err) {
-      console.error(err);
+      console.error("Login error:", err);
       setError("Something went wrong. Try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -110,9 +127,12 @@ const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-2 rounded-md font-semibold hover:bg-green-700 transition"
+            disabled={loading}
+            className={`w-full flex items-center justify-center gap-2 ${
+              loading ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+            } text-white py-2 rounded-md font-semibold transition`}
           >
-            <LogIn size={18} /> Log In
+            {loading ? "Logging in..." : (<><LogIn size={18} /> Log In</>)}
           </button>
         </form>
 

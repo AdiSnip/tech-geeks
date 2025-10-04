@@ -1,3 +1,5 @@
+// src/app/api/auth/signup/route.ts
+
 import dbConnect from "@/libs/db";
 import { User } from "@/models/user.model";
 import { NextResponse } from "next/server";
@@ -5,49 +7,25 @@ import { z } from "zod";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
-// Input validation schema
+// Schema for validating signup input
 const SignupSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email format"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   location: z.string().min(2, "Location is required"),
   businessType: z.string(),
-  role: z.string()
+  role: z.string(),
 });
 
 export async function POST(request: Request) {
   try {
-    // Connect to the database
     await dbConnect();
 
-    // Parse request body
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      );
-    }
+    // Step 1: Parse and validate request body
+    const body = await request.json();
+    const validatedData = SignupSchema.parse(body);
 
-    // Validate request data
-    let validatedData;
-    try {
-      validatedData = SignupSchema.parse(body);
-    } catch (e) {
-      if (e instanceof z.ZodError) {
-        const errorMessage = e.issues.map(err => err.message).join(', ');
-        return NextResponse.json(
-          { error: errorMessage },
-          { status: 400 }
-        );
-      }
-      // Re-throw if it's not a ZodError, so the outer catch can handle it
-      throw e;
-    }
-
-    // Check if user already exists
+    // Step 2: Check for duplicate user
     const existingUser = await User.findOne({ email: validatedData.email });
     if (existingUser) {
       return NextResponse.json(
@@ -56,28 +34,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create a new user (password hashing is handled in pre-save middleware)
+    // Step 3: Create new user (password hashing is assumed to be in schema pre-save middleware)
     const newUser = new User(validatedData);
     await newUser.save();
 
-    // --- JWT Secret Check ---
+    // Step 4: JWT generation
     const JWT_SECRET = process.env.JWT_SECRET;
     if (!JWT_SECRET) {
-      console.error("JWT_SECRET environment variable is not set!");
-      // This is a server configuration error, not a user error
+      console.error("JWT_SECRET is not defined in environment variables.");
       return NextResponse.json(
-        { error: "Server configuration error: JWT secret missing." },
+        { error: "Server configuration error. Please try again later." },
         { status: 500 }
       );
     }
 
-    // Generate a JWT token
     const token = jwt.sign(
       { userId: newUser._id },
-      JWT_SECRET, // Use the checked variable
+      JWT_SECRET,
+      { expiresIn: "10d" } // ✅ 10-day token expiry
     );
 
-    // Create the response and then set the cookie
+    // Step 5: Send response with token in secure cookie
     const response = NextResponse.json(
       { message: "User created successfully" },
       { status: 201 }
@@ -85,58 +62,43 @@ export async function POST(request: Request) {
 
     response.cookies.set("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Use secure in production
-      maxAge: 60 * 60, // 1 hour
-      path: '/',
-      sameSite: 'lax', // or 'strict' depending on your needs
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 10 * 24 * 60 * 60, // ✅ 10 days in seconds
+      path: "/",
+      sameSite: "lax",
     });
 
-    return response; // Return the response object after setting the cookie
+    return response;
 
   } catch (error) {
-    console.error("Error creating user:", error); // Log the full error for debugging
-
-    // Handle mongoose validation errors (e.g., from schema definition in model)
+    // 🔍 Mongoose validation error
     if (error instanceof mongoose.Error.ValidationError) {
       const errorMessage = Object.values(error.errors)
         .map(err => err.message)
-        .join(', ');
+        .join(", ");
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
+    }
+
+    // 🔍 Duplicate key (MongoDB unique index error)
+    if (error && typeof error === "object" && "code" in error && error.code === 11000) {
       return NextResponse.json(
-        { error: errorMessage },
-        { status: 400 }
+        { error: "An account with this email already exists." },
+        { status: 409 }
       );
     }
 
-    // Handle duplicate key errors from Mongoose/MongoDB
-    // This typically happens if you have unique indexes (e.g., on email)
-    if (error && typeof error === 'object' && 'code' in error && error.code === 11000) { // MongoDB duplicate key error code
-        return NextResponse.json(
-            { error: "An account with this email already exists." },
-            { status: 409 }
-        );
-    }
-
-
-    // Handle other general database errors (e.g., connection issues after initial connect)
-    if (error instanceof mongoose.Error) {
+    // 🔍 JWT or internal config error
+    if (error instanceof Error && error.message.includes("secret or public key must be provided")) {
       return NextResponse.json(
-        { error: "Database error. Please try again later." },
+        { error: "JWT secret configuration error." },
         { status: 500 }
       );
     }
 
-    // Catch any JWT specific errors, e.g., if the secret was invalid internally
-    if (error instanceof Error && error.message.includes('secret or public key must be provided')) {
-        return NextResponse.json(
-            { error: "Server configuration error: JWT secret is invalid." },
-            { status: 500 }
-        );
-    }
-
-
-    // Fallback for any other unexpected errors
+    // 🔍 Fallback
+    console.error("Unexpected error during signup:", error);
     return NextResponse.json(
-      { error: "An unexpected error occurred. Please try again." }, // More generic for user
+      { error: "An unexpected error occurred. Please try again later." },
       { status: 500 }
     );
   }
