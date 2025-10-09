@@ -1,136 +1,106 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useUser } from "@/context/userContext";
-import StatCard from "@/components/dashboard/StatCard";
-import RevenueComparison from "@/components/dashboard/RevenueComparison";
-import MonthlySalesChart from "@/components/dashboard/MonthlySalesChart";
-import ProductSalesPieChart from "@/components/dashboard/ProductSalesPieChart";
+import React, { useEffect, useState } from 'react';
+import { Package, CheckCircle, Edit3, ShoppingCart, DollarSign } from 'lucide-react';
+import StatCard from '@/components/dashboard/StatCard';
+import RevenueComparison from '@/components/dashboard/RevenueComparison';
+import MonthlySalesChart from '@/components/dashboard/MonthlySalesChart';
+import ProductSalesPieChart from '@/components/dashboard/ProductSalesPieChart';
+
+interface MonthlySalesData {
+  month: string;
+  sales: number;
+  revenue: number;
+}
+
+interface DashboardProductSalesData {
+  name: string;
+  sales: number;
+  revenue: number;
+}
 
 interface DashboardData {
   totalProducts: number;
-  activeListing: number;
-  draftListing: number;
-  soldProducts: number;
+  activeListings: number;
+  draftListings: number;
+  totalSoldProductsCount: number;
   totalRevenue: number;
-  currentMonthRevenue: number;
-  prevMonthRevenue: number;
-  revenueChangePercentage: number;
-  monthlySalesData: {
-    month: string;
-    sales: number;
-    revenue: number;
-  }[];
-  productSalesDistribution: {
-    name: string;
-    value: number;
-    revenue: number;
-  }[];
+  monthlySalesData: MonthlySalesData[];
+  monthlyRevenueComparison: {
+    currentMonthRevenue: number;
+    previousMonthRevenue: number;
+  };
+  productSalesDistribution: DashboardProductSalesData[];
 }
 
-const Page = () => {
-  const { user } = useUser();
+const DashboardPage: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!user?._id) return;
-      
       try {
-        setLoading(true);
-        const response = await fetch(`/api/dashboard?userId=${user._id}`);
-        
+        const response = await fetch('/api/dashboard');
         if (!response.ok) {
-          throw new Error('Failed to fetch dashboard data');
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
+        const data: DashboardData = await response.json();
         setDashboardData(data);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data. Please try again later.');
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : String(e));
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [user]);
+  }, []);
 
   if (loading) {
-    return (
-      <div className="h-full w-full bg-amber-50 p-4 flex items-center justify-center">
-        <div className="text-xl">Loading dashboard data...</div>
-      </div>
-    );
+    return <div className="text-gray-500 text-center mt-8">Loading dashboard data...</div>;
   }
 
   if (error) {
-    return (
-      <div className="h-full w-full bg-amber-50 p-4">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      </div>
-    );
+    return <div className="text-red-500 text-center mt-8">Error: {error}</div>;
   }
 
+  if (!dashboardData) {
+    return <div className="text-gray-500 text-center mt-8">No dashboard data available.</div>;
+  }
+
+  // ✅ Map DashboardProductSalesData to ProductSalesPieChartData
+  const pieChartData = dashboardData.productSalesDistribution.map(item => ({
+    name: item.name,
+    value: item.sales
+  }));
+
   return (
-    <div className="h-full w-full bg-amber-50 p-4">
-      <h1 className="text-3xl font-bold mb-6">
-        {user ? `Welcome, ${user.name}!` : "Loading..."}
-      </h1>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-6">Dashboard Overview</h1>
 
-      {dashboardData && (
-        <>
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <StatCard 
-              title="Total Products" 
-              value={dashboardData.totalProducts} 
-              bgColor="bg-blue-50"
-            />
-            <StatCard 
-              title="Active Listings" 
-              value={dashboardData.activeListing} 
-              bgColor="bg-green-50"
-            />
-            <StatCard 
-              title="Products Sold" 
-              value={dashboardData.soldProducts} 
-              bgColor="bg-purple-50"
-            />
-            <StatCard 
-              title="Total Revenue" 
-              value={`$${dashboardData.totalRevenue.toFixed(2)}`} 
-              bgColor="bg-yellow-50"
-            />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<StatCard title="Total Products" value={dashboardData.totalProducts} icon={Package} />
+<StatCard title="Active Listings" value={dashboardData.activeListings} icon={CheckCircle} />
+<StatCard title="Draft Listings" value={dashboardData.draftListings} icon={Edit3} />
+<StatCard title="Products Sold" value={dashboardData.totalSoldProductsCount} icon={ShoppingCart} />
+<StatCard title="Total Revenue" value={dashboardData.totalRevenue} icon={DollarSign} />
 
-          {/* Revenue Comparison and Chart */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-            <div className="lg:col-span-1">
-              <RevenueComparison 
-                currentMonthRevenue={dashboardData.currentMonthRevenue}
-                prevMonthRevenue={dashboardData.prevMonthRevenue}
-                changePercentage={dashboardData.revenueChangePercentage}
-              />
-            </div>
-            <div className="lg:col-span-2">
-              <MonthlySalesChart data={dashboardData.monthlySalesData} />
-            </div>
-          </div>
-          
-          {/* Product Sales Distribution Pie Chart */}
-          <div className="mb-6">
-            <ProductSalesPieChart data={dashboardData.productSalesDistribution || []} />
-          </div>
-        </>
-      )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <MonthlySalesChart data={dashboardData.monthlySalesData} />
+        <RevenueComparison
+          currentMonthRevenue={dashboardData.monthlyRevenueComparison.currentMonthRevenue}
+          previousMonthRevenue={dashboardData.monthlyRevenueComparison.previousMonthRevenue}
+        />
+      </div>
+
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <ProductSalesPieChart data={pieChartData} />
+      </div>
     </div>
   );
 };
 
-export default Page;
+export default DashboardPage;

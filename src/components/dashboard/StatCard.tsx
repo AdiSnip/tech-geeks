@@ -1,35 +1,41 @@
-"use client";
-
 import React from 'react';
+import { LucideIcon } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
-  value: string | number;
-  icon?: React.ReactNode;
-  change?: number;
-  bgColor?: string;
+  value: string | number | undefined | null; // ✅ allow undefined/null
+  icon: LucideIcon;
+  change?: string;
+  changeType?: 'increase' | 'decrease' | 'neutral';
 }
 
-const StatCard: React.FC<StatCardProps> = ({ 
-  title, 
-  value, 
-  icon, 
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  icon: Icon,
   change,
-  bgColor = "bg-white" 
+  changeType = 'neutral',
 }) => {
+  const changeColorClass = {
+    increase: 'text-green-500',
+    decrease: 'text-red-500',
+    neutral: 'text-gray-500',
+  }[changeType];
+
+  // ✅ Format number if value is a number, fallback to 0
+  const displayValue =
+    typeof value === 'number' ? `$${value.toFixed(2)}` : value ?? 'N/A';
+
   return (
-    <div className={`${bgColor} rounded-lg shadow-md p-4 flex flex-col`}>
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-gray-500 text-sm font-medium">{title}</h3>
-        {icon && <div className="text-gray-400">{icon}</div>}
+    <div className="bg-white p-4 rounded-lg shadow flex items-center justify-between">
+      <div>
+        <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+        <p className="text-2xl font-bold text-gray-900">{displayValue}</p>
+        {change && <p className={`text-sm ${changeColorClass}`}>{change}</p>}
       </div>
-      <div className="text-2xl font-bold mb-1">{value}</div>
-      {change !== undefined && (
-        <div className={`text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'} flex items-center`}>
-          {change >= 0 ? '↑' : '↓'} {Math.abs(change).toFixed(1)}%
-          <span className="text-gray-400 ml-1">from last month</span>
-        </div>
-      )}
+      <div className="text-gray-400">
+        <Icon size={28} />
+      </div>
     </div>
   );
 };

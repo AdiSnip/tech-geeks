@@ -1,44 +1,40 @@
-"use client";
-
 import React from 'react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 interface RevenueComparisonProps {
   currentMonthRevenue: number;
-  prevMonthRevenue: number;
-  changePercentage: number;
+  previousMonthRevenue: number;
 }
 
 const RevenueComparison: React.FC<RevenueComparisonProps> = ({
   currentMonthRevenue,
-  prevMonthRevenue,
-  changePercentage
+  previousMonthRevenue,
 }) => {
-  const isPositive = changePercentage >= 0;
-  
+  const percentageChange = previousMonthRevenue === 0
+    ? (currentMonthRevenue > 0 ? 100 : 0)
+    : ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100;
+
+  const isIncrease = percentageChange >= 0;
+  const changeIcon = isIncrease ? <ArrowUp size={16} /> : <ArrowDown size={16} />;
+  const changeColorClass = isIncrease ? 'text-green-500' : 'text-red-500';
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-4">
-      <h3 className="text-lg font-semibold mb-4">Revenue Comparison</h3>
-      
-      <div className="flex justify-between mb-6">
-        <div className="text-center">
-          <p className="text-gray-500 text-sm">Last Month</p>
-          <p className="text-xl font-bold">${prevMonthRevenue.toFixed(2)}</p>
-        </div>
-        
-        <div className="text-center">
-          <p className="text-gray-500 text-sm">Current Month</p>
+    <div className="bg-white p-4 rounded-lg shadow">
+      <h3 className="text-lg font-bold text-gray-800 mb-4">Revenue Comparison</h3>
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <p className="text-sm text-gray-500">Current Month</p>
           <p className="text-xl font-bold">${currentMonthRevenue.toFixed(2)}</p>
         </div>
-      </div>
-      
-      <div className="flex items-center justify-center">
-        <div className={`text-center ${isPositive ? 'text-green-500' : 'text-red-500'} font-medium`}>
-          <span className="text-2xl mr-1">{isPositive ? '↑' : '↓'}</span>
-          <span className="text-lg">{Math.abs(changePercentage).toFixed(1)}%</span>
-          <p className="text-gray-500 text-sm mt-1">
-            {isPositive ? 'Increase' : 'Decrease'} from last month
-          </p>
+        <div>
+          <p className="text-sm text-gray-500">Previous Month</p>
+          <p className="text-xl font-bold">${previousMonthRevenue.toFixed(2)}</p>
         </div>
+      </div>
+      <div className="flex items-center justify-end">
+        <span className={`text-sm font-medium ${changeColorClass} flex items-center`}>
+          {changeIcon} {Math.abs(percentageChange).toFixed(2)}%
+        </span>
       </div>
     </div>
   );

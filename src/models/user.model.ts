@@ -1,49 +1,68 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Types } from 'mongoose';
 import bcrypt from 'bcrypt';
 
 const GEN_SALT_ROUNDS = 10;
 
-// 1. TypeScript Interface for the Document
 export interface IUser extends Document {
   email: string;
-  password?: string; // Stored hashed
-  role: 'entrepreneur' | 'mentor' | 'admin';
+  password?: string;
+  role: 'user';
   name: string;
-  location: string;
+  location: {
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
   profilePicture?: string;
-  businessType: string;
-  profileComplete: number; // 0 to 100%
+  orderHistory?: [{
+    orderId: Types.ObjectId
+  }];
   createdAt: Date;
   updatedAt: Date;
+  comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
-// 2. Mongoose Schema
-const UserSchema: Schema = new Schema({
+const UserSchema: Schema<IUser> = new Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-  password: { type: String, required: true, select: false }, // Password field is hidden by default
-  role: { 
-    type: String, 
-    enum: ['entrepreneur', 'mentor', 'admin'], 
-    default: 'entrepreneur',
-    required: true 
+  password: { type: String, required: true, select: false },
+  role: {
+    type: String,
+    default: 'user',
+    required: true
   },
   name: { type: String, required: true },
-  location: { type: String, required: true },
-  profilePicture: { type: String },
-  businessType: { type: String, required: true },
-  profileComplete: { type: Number, default: 0, min: 0, max: 100 },
+  location: {
+    address: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    zipCode: { type: String, required: true },
+    country: { type: String, required: true },
+  },
+  profilePicture: String,
+  orderHistory: [{
+    orderId: {
+      type: Schema.ObjectId,
+      ref: 'Order'
+    }
+  }]
 }, { timestamps: true });
 
 UserSchema.pre<IUser>('save', async function (next) {
-  if(!this.isModified('password') || !this.password) return next();
+  if (!this.isModified('password') || !this.password) return next();
   try {
     const salt = await bcrypt.genSalt(GEN_SALT_ROUNDS);
     this.password = await bcrypt.hash(this.password, salt);
     next();
-  } catch (error: unknown) {
+  } catch (error) {
     next(error as Error);
   }
 });
 
-// 3. Mongoose Model
+UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+  if (!this.password) return false;
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
 export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

@@ -37,9 +37,6 @@ export default function Hero() {
           console.log("User already in context:", user);
         }
 
-        // Redirect to dashboard after setting user
-        router.push("/main/dashboard");
-
       } catch (err) {
         console.error("Failed to fetch user:", err);
         router.push("/auth/login");
@@ -50,7 +47,6 @@ export default function Hero() {
       fetchUser();
     } else {
       console.log("User already present:", user);
-      router.push("/main/dashboard");
     }
 
   }, [user, setUser, router]);
