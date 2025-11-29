@@ -37,13 +37,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email already exists" }, { status: 409 });
     }
 
-    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-
+// Create user (no manual hashing)
     const newUser = new User({
       ...validatedData,
-      password: hashedPassword,
+      role: "user",
     });
     await newUser.save();
+
 
     const token = jwt.sign({ userId: newUser._id, role: newUser.role }, process.env.JWT_SECRET!, { expiresIn: '10d' });
 

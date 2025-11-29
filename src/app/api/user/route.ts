@@ -1,30 +1,29 @@
-// src/app/api/User/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { User } from "@/models/user.model";
 import dbConnect from "@/libs/db";
+import { User } from "@/models/user.model";
+import { Entrepreneur } from "@/models/entrepreneur.model";
 
-// Utility: Parse cookies from headers
-function parseCookies(req: Request): Record<string, string> {
+// ------------------ Utility: Parse cookies ------------------
+function parseCookies(req: NextRequest): Record<string, string> {
   const cookieHeader = req.headers.get("cookie") || "";
   return Object.fromEntries(
     cookieHeader
       .split(";")
-      .map(c => c.trim().split("="))
+      .map((c) => c.trim().split("="))
       .map(([k, v]) => [k, decodeURIComponent(v)])
   );
 }
 
-// Utility: Verify JWT and return userId
-function verifyToken(token: string): { userId: string } {
-  return jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+// ------------------ Utility: Verify JWT ------------------
+function verifyToken(token: string): { userId: string; role: string } {
+  return jwt.verify(token, process.env.JWT_SECRET!) as { userId: string; role: string };
 }
 
-// GET: Fetch current user
-export async function GET(req: Request) {
+// ------------------ GET: Fetch current user ------------------
+export async function GET(req: NextRequest) {
+  await dbConnect();
 
-  await dbConnect()
-  
   const cookies = parseCookies(req);
   const token = cookies["token"];
 
@@ -33,14 +32,20 @@ export async function GET(req: Request) {
   }
 
   try {
-    const { userId } = verifyToken(token);
-    const user = await User.findById(userId);
+    const { userId, role } = verifyToken(token);
+
+    // Determine which model to query
+    const Model = role === "entrepreneur" || role === "admin" ? Entrepreneur : User;
+    const user = await Model.findById(userId).lean();
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    // Remove sensitive data
+    delete (user as { password?: string }).password;
+
+    return NextResponse.json(user, { status: 200 });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Invalid token" },
@@ -49,8 +54,10 @@ export async function GET(req: Request) {
   }
 }
 
-// POST: Update user data
-export async function POST(req: Request) {
+// ------------------ POST: Update user data ------------------
+export async function POST(req: NextRequest) {
+  await dbConnect();
+
   const cookies = parseCookies(req);
   const token = cookies["token"];
 
@@ -60,48 +67,44 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const {
-      email,
-      password,
-      role,
-      name,
-      location,
-      profilePicture,
-      businessType,
-      profileComplete,
-    }: {
-      email?: string;
-      password?: string;
-      role?: string;
-      name?: string;
-      location?: string;
-      profilePicture?: string;
-      businessType?: string;
-      profileComplete?: boolean;
-    } = body;
+    const { userId, role } = verifyToken(token);
 
-    const { userId } = verifyToken(token);
+    // Choose correct model based on role
+    const Model = role === "entrepreneur" || role === "admin" ? Entrepreneur : User;
 
-    const updatedUser = await User.findByIdAndUpdate(
+    // Define allowed fields based on model
+    const updateData: Record<string, string | number | boolean | undefined> = {};
+
+    // Common fields
+    if (body.email) updateData.email = body.email;
+    if (body.name) updateData.name = body.name;
+    if (body.location) updateData.location = body.location;
+    if (body.profilePicture) updateData.profilePicture = body.profilePicture;
+
+    // Entrepreneur-specific
+    if (role === "entrepreneur" || role === "admin") {
+      if (body.businessType) updateData.businessType = body.businessType;
+      if (body.companyName) updateData.companyName = body.companyName;
+      if (body.companyDescription) updateData.companyDescription = body.companyDescription;
+      if (body.website) updateData.website = body.website;
+      if (body.industry) updateData.industry = body.industry;
+      if (typeof body.profileComplete === "number")
+        updateData.profileComplete = body.profileComplete;
+    }
+
+    const updatedUser = await Model.findByIdAndUpdate(
       userId,
-      {
-        email,
-        password,
-        role,
-        name,
-        location,
-        profilePicture,
-        businessType,
-        profileComplete,
-      },
+      { $set: updateData },
       { new: true, runValidators: true }
-    ).select("+password");
+    ).lean();
 
     if (!updatedUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(updatedUser);
+    delete (updatedUser as { password?: string }).password;
+
+    return NextResponse.json(updatedUser, { status: 200 });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Something went wrong" },

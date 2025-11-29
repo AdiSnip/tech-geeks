@@ -2,7 +2,6 @@ import dbConnect from "@/libs/db";
 import { Entrepreneur } from "@/models/entrepreneur.model";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 // ---------------- Zod Schema ----------------
@@ -39,16 +38,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email already exists" }, { status: 409 });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-
-    // Create user
+// Create user (no manual hashing)
     const newUser = new Entrepreneur({
       ...validatedData,
-      password: hashedPassword,
       role: "entrepreneur",
     });
     await newUser.save();
+
 
     // Generate JWT
     const token = jwt.sign({ userId: newUser._id, role: newUser.role }, process.env.JWT_SECRET!, { expiresIn: "10d" });

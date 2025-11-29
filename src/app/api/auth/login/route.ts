@@ -1,5 +1,6 @@
 import dbConnect from "@/libs/db";
 import { User } from "@/models/user.model";
+import { Entrepreneur } from "@/models/entrepreneur.model";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
@@ -21,7 +22,10 @@ export async function POST(request: Request) {
     const { email, password } = LoginSchema.parse(body);
 
     // Step 2: Find user by email
-    const user = await User.findOne({ email });
+    console.log("Login attempt:", email);
+    const user = await User.findOne({ email }).select("+password") || await Entrepreneur.findOne({ email }).select("+password");
+    console.log("User found:", !!user, user?.role);
+    if (user) console.log("User password hash:", user.password);
     if (!user) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }

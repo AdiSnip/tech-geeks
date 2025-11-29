@@ -16,6 +16,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen w-full overflow-hidden`}>
+      <script src="https://widget.cloudinary.com/v2.0/global/all.js" async type="text/javascript"></script>
       {/* Navbar */}
       <div className="w-full h-[10vh] z-10 relative">
         <DashboardNavbar onMenuToggle={toggleMobileMenu} showMobileMenu={isMobileMenuOpen} />
@@ -40,6 +41,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {/* Main content */}
         <main className="h-[90vh] flex-1 overflow-y-auto px-1 md:ml-0">{children}</main>
       </div>
+      
+
     </div>
   );
 }
